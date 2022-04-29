@@ -1,0 +1,102 @@
+import zipfile
+from PIL import Image, ImageDraw
+import pytesseract
+import cv2 as cv
+import numpy as np
+
+# loading the face detection classifier
+face_cascade = cv.CascadeClassifier('readonly/haarcascade_frontalface_default.xml')
+# the rest is up to you!
+
+#GRAB FILE NAMES FROM ZIP
+def get_files_from_zip(zipfile_location): 
+    with zipfile.ZipFile(zipfile_location) as files:
+        files=files.namelist()
+    return files
+
+#CREATE SPREADSHEET
+def make_spreadsheet(lst):
+    try:
+        first_image= lst[0]
+        contact_sheet=Image.new(first_image.mode, (first_image.width*5,first_image.height*2))
+        x=0
+        y=0
+        for img in lst:
+            contact_sheet.paste(img, (x, y))
+            if x+first_image.width == contact_sheet.width:
+                x=0
+                y=y+first_image.height
+            else:
+                x=x+first_image.width
+            result=contact_sheet.resize((int(contact_sheet.width/2),int(contact_sheet.height/2) ))
+        display(result)
+    except IndexError: pass
+        
+#ADD FILES' FACES TO SPREADSHEET
+def grab_images(file):
+    capture=[]
+    pil_image=Image.open(file).convert('RGB')
+    image=cv.imread(file)
+    cv_image= cv.threshold(image, 165,255, cv.THRESH_BINARY)[1]
+    face=face_cascade.detectMultiScale(cv_image, 1.18, minSize=(145,145), maxSize=(1000,1000))
+    if face==():
+        print('But there were no faces in that file!')
+    drawing=ImageDraw.Draw(pil_image)
+    for info in face:
+        x,y,w,h=info
+        drawing.rectangle((x,y,x+w,y+h), outline='red',width=5)
+        box=(x,y,x+w,y+h)
+        people=pil_image.crop(box)
+        faces=people.resize(size=(128,128))
+        capture.append(faces)
+    result=make_spreadsheet(capture)
+    return result
+
+# CREATE LIST OF DICTIONARIES (KEY=FILE NAME, VALUE=FILE TEXT)
+def dictionary_list(zipfile):
+    files=get_files_from_zip(zipfile)
+    clipping=[]
+    if len(files)==1:
+        info={}
+        image=cv.imread(files)
+        grayed= cv.cvtColor(image, cv.COLOR_BGR2GRAY)
+        text=pytesseract.image_to_string(image).split()
+        info[file]=text
+        clipping.append(info)
+        return clipping
+    else:
+        for file in files:
+            info={}
+            image=cv.imread(file)
+            grayed= cv.cvtColor(image, cv.COLOR_BGR2GRAY)
+            text=pytesseract.image_to_string(image).split()
+            info[file]=text
+            clipping.append(info)
+        return clipping
+
+#CREATE LIST OF ITERABLE FILES AND PARSE THROUGH THEIR DICTIONARY'S TEXT
+def related_images(keyword, zipfile):
+    file_listing=[]
+    thru_list=dictionary_list(zipfile)
+    for dictionary in thru_list:
+        for key, string in dictionary.items():
+            if keyword in string:
+                file_listing.append(key)
+    return file_listing
+
+#GRAB KEYWORD AND ZIPFILE FOR SEARCH TO PRODUCE RESULTS
+def search(keyword, zipfile=None):
+    if zipfile==None:
+        zipfile='readonly/images.zip'
+    file_list=related_images(keyword, zipfile)
+    print('--Search results for {} from {}--'.format(keyword, zipfile))
+    for k in file_list:
+        print('Results found in file {}'.format(k))
+        relative_faces=grab_images(k)
+        
+
+
+##search('Christopher', 'readonly/small_img.zip')
+##search('Mark')
+#search(input('Please type search word (or name) and a zipfile, seperated by a comma): '))
+search('negotiations') #-A SEARCH WORD FOR A FILE WITH NO FACES FOR TESTING-#
