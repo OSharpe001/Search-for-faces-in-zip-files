@@ -4,9 +4,9 @@ import pytesseract
 import cv2 as cv
 import numpy as np
 
-# loading the face detection classifier
+# LOADING THE FACE DETECTION CLASSIFIER
 face_cascade = cv.CascadeClassifier('readonly/haarcascade_frontalface_default.xml')
-# the rest is up to you!
+
 
 #GRAB FILE NAMES FROM ZIP
 def get_files_from_zip(zipfile_location): 
@@ -95,8 +95,4 @@ def search(keyword, zipfile=None):
         relative_faces=grab_images(k)
         
 
-
-##search('Christopher', 'readonly/small_img.zip')
-##search('Mark')
-#search(input('Please type search word (or name) and a zipfile, seperated by a comma): '))
-search('negotiations') #-A SEARCH WORD FOR A FILE WITH NO FACES FOR TESTING-#
+search(input('Please type search word (or name) and a zipfile, seperated by a comma): '))
